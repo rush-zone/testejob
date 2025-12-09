@@ -4,9 +4,265 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Documenta</title>
+    <title>GSAP • Video on Scroll</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #0f172a;
+            --panel: #111827;
+            --accent: #22c55e;
+            --text: #e5e7eb;
+            --muted: #94a3b8;
+            --card: #1f2937;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: radial-gradient(circle at 10% 20%, rgba(34, 197, 94, 0.1), transparent 25%),
+                        radial-gradient(circle at 90% 10%, rgba(94, 234, 212, 0.1), transparent 25%),
+                        radial-gradient(circle at 50% 80%, rgba(14, 165, 233, 0.1), transparent 25%),
+                        var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        header {
+            padding: 4rem 1.5rem 3rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: clamp(2.5rem, 5vw, 3.75rem);
+            margin-bottom: 1rem;
+            letter-spacing: -0.03em;
+        }
+
+        header p {
+            color: var(--muted);
+            max-width: 680px;
+            margin: 0 auto;
+            font-size: 1.1rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+            max-width: 1100px;
+            margin: 0 auto 3rem;
+            padding: 0 1.5rem;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.25rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+        }
+
+        .card h3 {
+            margin: 0 0 0.5rem;
+            font-size: 1.05rem;
+        }
+
+        .card p {
+            margin: 0;
+            color: var(--muted);
+        }
+
+        .video-section {
+            position: relative;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem 6rem;
+        }
+
+        .video-shell {
+            position: relative;
+            background: var(--panel);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 30px 120px rgba(0, 0, 0, 0.35);
+        }
+
+        .video-shell::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(120% 60% at 50% 0%, rgba(34, 197, 94, 0.08), transparent);
+            pointer-events: none;
+        }
+
+        video {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-height: 70vh;
+            background: #000;
+        }
+
+        .video-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.55));
+            color: var(--text);
+            backdrop-filter: blur(1px);
+            transition: opacity 0.3s ease;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .video-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 0.75rem 1.1rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            font-weight: 600;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.18);
+        }
+
+        .timeline {
+            margin-top: 1.25rem;
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .timeline .progress {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #22c55e, #a855f7);
+            transition: width 0.1s linear;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2.5rem 1.5rem 3rem;
+            color: var(--muted);
+        }
+    </style>
 </head>
 <body>
-    <h1>Olá Mundo!</h1>
+    <header>
+        <p class="status" style="margin-bottom: 1rem; justify-content: center;">
+            <span class="dot"></span>
+            Demonstração GSAP + ScrollTrigger
+        </p>
+        <h1>Controle a reprodução do vídeo<br>enquanto rola a página</h1>
+        <p>Use a rolagem para dirigir a reprodução de um vídeo HTML5. A mágica acontece com GSAP + ScrollTrigger: o vídeo é fixado na tela e o tempo do player acompanha o progresso da rolagem.</p>
+    </header>
+
+    <section class="grid" aria-label="Benefícios">
+        <article class="card">
+            <h3>Scroll progressivo</h3>
+            <p>A posição da página é usada como scrub para o tempo do vídeo.</p>
+        </article>
+        <article class="card">
+            <h3>Experiência suave</h3>
+            <p>Suavização nativa do ScrollTrigger evita saltos bruscos.</p>
+        </article>
+        <article class="card">
+            <h3>Implementação simples</h3>
+            <p>Poucas linhas de JavaScript com GSAP e eventos do vídeo.</p>
+        </article>
+    </section>
+
+    <section class="video-section" aria-label="Vídeo controlado pela rolagem">
+        <div class="video-shell">
+            <video id="demo-video" preload="auto" muted playsinline>
+                <source src="https://cdn.coverr.co/videos/coverr-stars-over-mountains-1664/1080p.mp4" type="video/mp4">
+                Seu navegador não suporta vídeo HTML5.
+            </video>
+            <div class="video-overlay" id="video-overlay" role="status">
+                <div>
+                    <div class="status" aria-live="polite">
+                        <span class="dot"></span>
+                        Sincronizando com a rolagem...
+                    </div>
+                    <div class="timeline" aria-hidden="true">
+                        <div class="progress" id="progress-bar"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>Role até o final da página para levar o player até os últimos frames. Tudo controlado via ScrollTrigger.</p>
+    </footer>
+
+    <script src="https://unpkg.com/gsap@3/dist/gsap.min.js"></script>
+    <script src="https://unpkg.com/gsap@3/dist/ScrollTrigger.min.js"></script>
+    <script>
+        // Configuração do ScrollTrigger para controlar o tempo do vídeo durante a rolagem
+        const video = document.getElementById('demo-video');
+        const overlay = document.getElementById('video-overlay');
+        const progressBar = document.getElementById('progress-bar');
+
+        gsap.registerPlugin(ScrollTrigger);
+
+        const setupScrollDrivenVideo = () => {
+            const duration = video.duration || 0;
+            if (!duration) return; // protege contra metadata ausente
+
+            ScrollTrigger.create({
+                trigger: '.video-section',
+                start: 'top top',
+                end: '+=180%',
+                scrub: true,
+                pin: '.video-shell',
+                anticipatePin: 1,
+                onUpdate: (self) => {
+                    const t = self.progress * duration;
+                    video.currentTime = t;
+                    progressBar.style.width = `${self.progress * 100}%`;
+                },
+                onEnter: () => overlay.classList.add('hidden'),
+                onEnterBack: () => overlay.classList.add('hidden'),
+                onLeaveBack: () => overlay.classList.remove('hidden'),
+                onLeave: () => overlay.classList.remove('hidden')
+            });
+        };
+
+        // Garante metadados carregados antes de instanciar o ScrollTrigger
+        if (video.readyState >= 1) {
+            setupScrollDrivenVideo();
+        } else {
+            video.addEventListener('loadedmetadata', setupScrollDrivenVideo, { once: true });
+        }
+
+        // Evita que o vídeo dispare autoplay nativo e mantém o controle com a rolagem
+        video.addEventListener('play', () => video.pause());
+    </script>
 </body>
 </html>
