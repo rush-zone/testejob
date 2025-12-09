@@ -4,9 +4,556 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Documenta</title>
+    <title>GSAP • Video on Scroll</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #0f172a;
+            --panel: #111827;
+            --accent: #22c55e;
+            --text: #e5e7eb;
+            --muted: #94a3b8;
+            --card: #1f2937;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .bg-wrapper {
+            position: fixed;
+            inset: 0;
+            z-index: -2;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .bg-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: saturate(1.15) brightness(0.35);
+            transform: scale(1.05);
+        }
+
+        .bg-overlay {
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(50% 40% at 30% 20%, rgba(34, 197, 94, 0.18), transparent 55%),
+                radial-gradient(30% 30% at 80% 15%, rgba(94, 234, 212, 0.18), transparent 55%),
+                radial-gradient(30% 30% at 70% 80%, rgba(168, 85, 247, 0.25), transparent 60%),
+                linear-gradient(120deg, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.6));
+        }
+
+        .content-shell {
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            padding: 4rem 1.5rem 3rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+            position: relative;
+        }
+
+        header h1 {
+            font-size: clamp(2.5rem, 5vw, 3.75rem);
+            margin-bottom: 1rem;
+            letter-spacing: -0.03em;
+        }
+
+        header p {
+            color: var(--muted);
+            max-width: 680px;
+            margin: 0 auto;
+            font-size: 1.1rem;
+        }
+
+        .floating-badge {
+            position: absolute;
+            top: 0.5rem;
+            right: 1.25rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--muted);
+            font-size: 0.9rem;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.25);
+        }
+
+        .floating-badge svg {
+            width: 18px;
+            height: 18px;
+            color: var(--accent);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+            max-width: 1100px;
+            margin: 0 auto 3rem;
+            padding: 0 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.25rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+            backdrop-filter: blur(4px) saturate(1.2);
+            position: relative;
+        }
+
+        .card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, rgba(34, 197, 94, 0.08), rgba(168, 85, 247, 0.05));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .card:hover::after {
+            opacity: 1;
+        }
+
+        .card h3 {
+            margin: 0 0 0.5rem;
+            font-size: 1.05rem;
+        }
+
+        .card p {
+            margin: 0;
+            color: var(--muted);
+        }
+
+        .video-section {
+            position: relative;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem 6rem;
+            z-index: 1;
+        }
+
+        .orb {
+            position: absolute;
+            width: 360px;
+            height: 360px;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.45;
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.55), rgba(168, 85, 247, 0.4));
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .orb.secondary {
+            width: 280px;
+            height: 280px;
+            background: linear-gradient(160deg, rgba(94, 234, 212, 0.55), rgba(59, 130, 246, 0.35));
+        }
+
+        .video-shell {
+            position: relative;
+            background: var(--panel);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 30px 120px rgba(0, 0, 0, 0.35);
+            isolation: isolate;
+        }
+
+        .video-shell::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(120% 60% at 50% 0%, rgba(34, 197, 94, 0.08), transparent);
+            pointer-events: none;
+        }
+
+        .video-shell::before {
+            content: '';
+            position: absolute;
+            inset: -20% -25% auto;
+            height: 80%;
+            background: radial-gradient(40% 60% at 50% 50%, rgba(255, 255, 255, 0.1), transparent 70%);
+            opacity: 0.35;
+            transform: rotate(-5deg);
+        }
+
+        video {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-height: 70vh;
+            background: #000;
+        }
+
+        .video-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.55));
+            color: var(--text);
+            backdrop-filter: blur(1px);
+            transition: opacity 0.3s ease;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .video-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 0.75rem 1.1rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            font-weight: 600;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.18);
+        }
+
+        .timeline {
+            margin-top: 1.25rem;
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .timeline .progress {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #22c55e, #a855f7);
+            transition: width 0.1s linear;
+        }
+
+        .scroll-hint {
+            position: relative;
+            color: var(--muted);
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-top: 1.1rem;
+        }
+
+        .scroll-hint::before,
+        .scroll-hint::after {
+            content: '';
+            display: block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--accent);
+            opacity: 0.6;
+        }
+
+        .section-header {
+            text-align: center;
+            margin: 0 auto 1rem;
+            max-width: 800px;
+        }
+
+        .section-header h2 {
+            margin: 0 0 0.6rem;
+            letter-spacing: -0.02em;
+        }
+
+        .section-header p {
+            margin: 0;
+            color: var(--muted);
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1rem;
+            max-width: 1100px;
+            margin: 0 auto 3.5rem;
+            padding: 0 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .step-card {
+            background: rgba(17, 24, 39, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 1.25rem 1.4rem;
+            box-shadow: 0 16px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+            isolation: isolate;
+        }
+
+        .step-card::before {
+            content: attr(data-step);
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            color: rgba(255, 255, 255, 0.08);
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        .step-card h3 {
+            margin: 0 0 0.5rem;
+        }
+
+        .step-card p {
+            margin: 0;
+            color: var(--muted);
+        }
+
+        footer {
+            text-align: center;
+            padding: 2.5rem 1.5rem 3rem;
+            color: var(--muted);
+        }
+    </style>
 </head>
 <body>
-    <h1>Olá Mundo!</h1>
+    <div class="bg-wrapper" aria-hidden="true">
+        <video class="bg-video" autoplay muted loop playsinline>
+            <source src="https://cdn.coverr.co/videos/coverr-aerial-city-lights-4369/1080p.mp4" type="video/mp4">
+        </video>
+        <div class="bg-overlay"></div>
+    </div>
+
+    <div class="orb" style="top: -140px; left: -120px;"></div>
+    <div class="orb secondary" style="bottom: -120px; right: -80px;"></div>
+
+    <main class="content-shell">
+        <header>
+            <div class="floating-badge" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 12h4l2 7 4-14 2 7h4" />
+                </svg>
+                Motion em cada seção
+            </div>
+            <p class="status" style="margin-bottom: 1rem; justify-content: center;">
+                <span class="dot"></span>
+                Demonstração GSAP + ScrollTrigger
+            </p>
+            <h1>Controle a reprodução do vídeo<br>enquanto rola a página</h1>
+            <p>Use a rolagem para dirigir a reprodução de um vídeo HTML5. A mágica acontece com GSAP + ScrollTrigger: o vídeo é fixado na tela e o tempo do player acompanha o progresso da rolagem.</p>
+            <div class="scroll-hint">Deslize para ver as animações ganhando vida</div>
+        </header>
+
+        <section class="grid" aria-label="Benefícios">
+            <article class="card">
+                <h3>Scroll progressivo</h3>
+                <p>A posição da página é usada como scrub para o tempo do vídeo.</p>
+            </article>
+            <article class="card">
+                <h3>Experiência suave</h3>
+                <p>Suavização nativa do ScrollTrigger evita saltos bruscos.</p>
+            </article>
+            <article class="card">
+                <h3>Implementação simples</h3>
+                <p>Poucas linhas de JavaScript com GSAP e eventos do vídeo.</p>
+            </article>
+            <article class="card">
+                <h3>Site completo animado</h3>
+                <p>Cards, textos e fundo reagem ao scroll e à interação do usuário.</p>
+            </article>
+        </section>
+
+        <section class="video-section" aria-label="Vídeo controlado pela rolagem">
+            <div class="video-shell">
+                <video id="demo-video" preload="auto" muted playsinline>
+                    <source src="https://cdn.coverr.co/videos/coverr-stars-over-mountains-1664/1080p.mp4" type="video/mp4">
+                    Seu navegador não suporta vídeo HTML5.
+                </video>
+                <div class="video-overlay" id="video-overlay" role="status">
+                    <div>
+                        <div class="status" aria-live="polite">
+                            <span class="dot"></span>
+                            Sincronizando com a rolagem...
+                        </div>
+                        <div class="timeline" aria-hidden="true">
+                            <div class="progress" id="progress-bar"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section-header" aria-label="Como funciona">
+            <h2>Animação do início ao fim</h2>
+            <p>Conteúdo, destaques, cards e vídeo de fundo recebem movimentos suaves com GSAP.</p>
+        </section>
+
+        <section class="steps" aria-label="Etapas da animação">
+            <article class="step-card" data-step="01">
+                <h3>Entrada orquestrada</h3>
+                <p>Títulos, badge e cards surgem em sequência com efeito de fade-up.</p>
+            </article>
+            <article class="step-card" data-step="02">
+                <h3>Scroll com parallax</h3>
+                <p>Fundo em vídeo, orbes e elementos flutuantes ganham movimento contínuo.</p>
+            </article>
+            <article class="step-card" data-step="03">
+                <h3>Playback sincronizado</h3>
+                <p>O player principal é pinado e segue a rolagem com barra de progresso animada.</p>
+            </article>
+        </section>
+
+        <footer>
+            <p>Role até o final da página para levar o player até os últimos frames. Tudo controlado via ScrollTrigger.</p>
+        </footer>
+    </main>
+
+    <script src="https://unpkg.com/gsap@3/dist/gsap.min.js"></script>
+    <script src="https://unpkg.com/gsap@3/dist/ScrollTrigger.min.js"></script>
+    <script>
+        // Configuração do ScrollTrigger para controlar o tempo do vídeo durante a rolagem
+        const video = document.getElementById('demo-video');
+        const overlay = document.getElementById('video-overlay');
+        const progressBar = document.getElementById('progress-bar');
+        const backgroundVideo = document.querySelector('.bg-video');
+        const orbs = gsap.utils.toArray('.orb');
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        gsap.registerPlugin(ScrollTrigger);
+
+        const setupScrollDrivenVideo = () => {
+            const duration = video.duration || 0;
+            if (!duration) return; // protege contra metadata ausente
+
+            ScrollTrigger.create({
+                trigger: '.video-section',
+                start: 'top top',
+                end: '+=180%',
+                scrub: true,
+                pin: '.video-shell',
+                anticipatePin: 1,
+                onUpdate: (self) => {
+                    const t = self.progress * duration;
+                    video.currentTime = t;
+                    progressBar.style.width = `${self.progress * 100}%`;
+                },
+                onEnter: () => overlay.classList.add('hidden'),
+                onEnterBack: () => overlay.classList.add('hidden'),
+                onLeaveBack: () => overlay.classList.remove('hidden'),
+                onLeave: () => overlay.classList.remove('hidden')
+            });
+        };
+
+        const animatePage = () => {
+            if (prefersReducedMotion) return;
+
+            const intro = gsap.timeline({ defaults: { ease: 'power3.out' } });
+            intro.from('.floating-badge', { y: -20, opacity: 0, duration: 0.6 });
+            intro.from('header .status', { y: -12, opacity: 0, duration: 0.6 }, '-=0.35');
+            intro.from('header h1', { y: 24, opacity: 0, duration: 0.85 }, '-=0.25');
+            intro.from('header p', { y: 18, opacity: 0, duration: 0.8 }, '-=0.6');
+            intro.from('.scroll-hint', { y: 12, opacity: 0, duration: 0.6 }, '-=0.55');
+            intro.from('.card', { opacity: 0, y: 40, duration: 0.9, stagger: 0.12 }, '-=0.35');
+
+            gsap.from('.video-shell', {
+                opacity: 0,
+                y: 30,
+                duration: 0.9,
+                ease: 'power2.out',
+                scrollTrigger: {
+                    trigger: '.video-section',
+                    start: 'top 80%'
+                }
+            });
+
+            gsap.from('.section-header h2, .section-header p', {
+                opacity: 0,
+                y: 24,
+                duration: 0.8,
+                stagger: 0.1,
+                ease: 'power2.out',
+                scrollTrigger: {
+                    trigger: '.section-header',
+                    start: 'top 80%'
+                }
+            });
+
+            gsap.from('.step-card', {
+                opacity: 0,
+                y: 36,
+                duration: 0.85,
+                ease: 'power3.out',
+                stagger: 0.14,
+                scrollTrigger: {
+                    trigger: '.steps',
+                    start: 'top 75%'
+                }
+            });
+
+            gsap.to(orbs, {
+                y: 25,
+                duration: 6,
+                repeat: -1,
+                yoyo: true,
+                ease: 'sine.inOut',
+                stagger: { each: 0.35, from: 'edges' }
+            });
+
+            if (backgroundVideo) {
+                gsap.to(backgroundVideo, {
+                    scale: 1.08,
+                    duration: 10,
+                    repeat: -1,
+                    yoyo: true,
+                    ease: 'sine.inOut'
+                });
+            }
+        };
+
+        // Garante metadados carregados antes de instanciar o ScrollTrigger
+        if (video.readyState >= 1) {
+            setupScrollDrivenVideo();
+        } else {
+            video.addEventListener('loadedmetadata', setupScrollDrivenVideo, { once: true });
+        }
+
+        // Evita que o vídeo dispare autoplay nativo e mantém o controle com a rolagem
+        video.addEventListener('play', () => video.pause());
+
+        animatePage();
+    </script>
 </body>
 </html>
